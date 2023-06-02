@@ -26,6 +26,7 @@ except ImportError:  # Django < 1.10
 
 from .utils import get_last_activity, set_last_activity
 from .settings import EXPIRE_AFTER, PASSIVE_URLS, PASSIVE_URL_NAMES
+from django.http import HttpResponseRedirect
 
 
 class SessionSecurityMiddleware(MiddlewareMixin):
@@ -72,7 +73,10 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         delta = now - get_last_activity(request.session)
         expire_seconds = self.get_expire_seconds(request)
         if delta >= timedelta(seconds=expire_seconds):
+            sso_login_url = request.session.get('sso_login_url', None)
             logout(request)
+            if sso_login_url:
+                return HttpResponseRedirect("%s" % reverse('ssologinurl', kwargs={'sso_url': sso_login_url}))
         elif (request.path == reverse('session_security_ping') and
                 'idleFor' in request.GET):
             self.update_last_activity(request, now)
